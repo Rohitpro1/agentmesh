@@ -869,7 +869,7 @@ func (s *Server) mintDelegatedBiscuitFromJWT(
 	verifyCtx, cancel := context.WithTimeout(ctx, JWTVerificationTimeout)
 	defer cancel()
 
-	claims, token, err := identity.VerifyJWT(verifyCtx, subjectJWT, s.config.AllowedAudiences, s.getProviders())
+	claims, token, err := s.verifyJWT(verifyCtx, subjectJWT)
 	if err != nil {
 		return nil, time.Time{}, "", nil, http.StatusUnauthorized, errors.New(s.jwtRefusalMessage(err))
 	}
@@ -1393,7 +1393,7 @@ func (s *Server) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// Verify the user's OIDC JWT upfront before rendering consent or issuing a code.
 	verifyCtx, cancel := context.WithTimeout(r.Context(), JWTVerificationTimeout)
 	defer cancel()
-	claims, _, err := identity.VerifyJWT(verifyCtx, subjectJWT, s.config.AllowedAudiences, s.getProviders())
+	claims, _, err := s.verifyJWT(verifyCtx, subjectJWT)
 	if err != nil {
 		http.Error(w, "Invalid OIDC token: "+err.Error(), http.StatusUnauthorized)
 		return

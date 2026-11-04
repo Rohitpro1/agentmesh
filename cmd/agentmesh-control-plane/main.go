@@ -42,6 +42,7 @@ var (
 	dbDSN                  string
 	dbDSNPath              string
 	issuerFlags            controlplane.IssuerFlags
+	spiffeBundleEndpoints  []string
 	oidcClientID           string
 	allowedAudiencesFlag   string
 	keyRotationInterval    time.Duration
@@ -135,6 +136,7 @@ func main() {
 				DataSourceName:         dbDSN,
 				OIDCIssuer:             issuerFlags.OIDCIssuer(),
 				WorkloadIssuer:         issuerFlags.WorkloadIssuer(),
+				SPIFFEBundleEndpoints: spiffeBundleEndpoints,
 				OIDCClientID:           oidcClientID,
 				AllowedAudiences:       auds,
 				LeaseDuration:          leaseDuration,
@@ -201,6 +203,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&dbDSN, "db-dsn", "control-plane.db", "Database DSN/Connection URL (avoid for postgres: embeds a password; prefer --db-dsn-path or AGENTMESH_DB_DSN)")
 	rootCmd.PersistentFlags().StringVar(&dbDSNPath, "db-dsn-path", "", "Path to file containing the database DSN/Connection URL (overrides --db-dsn; or env AGENTMESH_DB_DSN)")
 	issuerFlags.Register(rootCmd.Flags(), "")
+	rootCmd.Flags().StringSliceVar(&spiffeBundleEndpoints, "spiffe-bundle-endpoint", nil, "SPIFFE JWT-SVID trust bundle endpoint as <trust-domain>=<https-url>; repeat for each trust domain")
 	rootCmd.Flags().StringVar(&oidcClientID, "oidc-client-id", "", "OAuth client ID advertised to joining nodes via /info (defaults to the first allowed audience)")
 	rootCmd.Flags().StringVar(&allowedAudiencesFlag, "allowed-audiences", api.DefaultAudience, "Comma-separated list of allowed OIDC audiences")
 	rootCmd.Flags().DurationVar(&keyRotationInterval, "key-rotation-interval", 24*time.Hour, "Key rotation interval (e.g. 24h). 0 means the default, 24h. --signing-key-path turns rotation off.")

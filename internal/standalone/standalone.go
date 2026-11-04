@@ -113,6 +113,7 @@ type Options struct {
 	// OIDCIssuer optionally enables full OIDC enrollment.
 	OIDCIssuer       string
 	WorkloadIssuer   string
+	SPIFFEBundleEndpoints []string
 	AllowedAudiences []string
 	// OIDCClientID is the OAuth client id advertised via /info.
 	OIDCClientID string
@@ -295,6 +296,7 @@ func (s *Server) Start(ctx context.Context) (retErr error) {
 		DataSourceName:         s.opts.DBDSN,
 		OIDCIssuer:             s.opts.OIDCIssuer,
 		WorkloadIssuer:         s.opts.WorkloadIssuer,
+		SPIFFEBundleEndpoints: s.opts.SPIFFEBundleEndpoints,
 		OIDCClientID:           s.opts.OIDCClientID,
 		AllowedAudiences:       s.opts.AllowedAudiences,
 		LeaseDuration:          s.opts.ControlPlane.LeaseDuration,

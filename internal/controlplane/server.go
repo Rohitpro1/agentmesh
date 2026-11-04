@@ -149,6 +149,7 @@ type Server struct {
 	operatorKeys          *operatorSigningKeys
 	operatorKeysMu        sync.Mutex
 	providers             map[string]*oidc.Provider
+	spiffeBundles         *identity.SPIFFEBundleManager
 	workloadIssuers       map[string]bool
 	workloadEmailSuffixes map[string][]string
 
@@ -228,6 +229,11 @@ func NewServer(config Options, store storage.Store) (*Server, error) {
 	reg.MustRegister(newMeshStateCollector(store))
 
 	workloadIssuers, workloadEmailSuffixes := parseWorkloadIssuers(config.WorkloadIssuer)
+	spiffeBundles, err := identity.NewSPIFFEBundleManager(config.SPIFFEBundleEndpoints)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("invalid SPIFFE bundle endpoint configuration: %w", err)
+	}
 
 	return &Server{
 		config:                config,
@@ -241,6 +247,7 @@ func NewServer(config Options, store storage.Store) (*Server, error) {
 		bannedNodeRevIDs:      make(map[string]string),
 		oauthCodes:            make(map[string]*oauthAuthCode),
 		providers:             make(map[string]*oidc.Provider),
+		spiffeBundles:         spiffeBundles,
 		workloadIssuers:       workloadIssuers,
 		operatorKeys:          operatorKeys,
 		workloadEmailSuffixes: workloadEmailSuffixes,
@@ -634,6 +641,9 @@ func (s *Server) isWorkloadClaims(claims jwt.MapClaims) bool {
 	}
 	iss, _ := claims["iss"].(string)
 	iss = strings.TrimSpace(iss)
+	if sub, _ := claims["sub"].(string); strings.HasPrefix(sub, "spiffe://") {
+		return true
+	}
 	if s.workloadIssuers[iss] {
 		return true
 	}
@@ -704,6 +714,24 @@ func (s *Server) getProviders() map[string]*oidc.Provider {
 		pCopy[k] = v
 	}
 	return pCopy
+}
+
+// verifyJWT accepts either an OIDC JWT from the configured discovery providers
+// or a JWT-SVID verified against its explicitly configured SPIFFE bundle.
+func (s *Server) verifyJWT(ctx context.Context, raw string) (jwt.MapClaims, *oidc.IDToken, error) {
+	domain, isSPIFFE, hintErr := identity.SPIFFETrustDomainFromJWT(raw)
+	if !isSPIFFE {
+		return identity.VerifyJWT(ctx, raw, s.config.AllowedAudiences, s.getProviders())
+	}
+	if hintErr != nil {
+		return nil, nil, hintErr
+	}
+	claims, expiry, err := s.spiffeBundles.VerifyJWT(ctx, raw, domain, s.config.AllowedAudiences)
+	if err != nil {
+		return nil, nil, err
+	}
+	subject, _ := claims["sub"].(string)
+	return claims, &oidc.IDToken{Subject: subject, Expiry: expiry}, nil
 }
 
 // keyRotationCheckInterval is how often a replica asks the store whether a
@@ -925,7 +953,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), JWTVerificationTimeout)
 	defer cancel()
 
-	claims, token, err := identity.VerifyJWT(ctx, req.Jwt, s.config.AllowedAudiences, s.getProviders())
+	claims, token, err := s.verifyJWT(ctx, req.Jwt)
 	if err != nil {
 		logger.Errorw("JWT verification failed", "peer_id", req.PeerId, "error", err)
 		http.Error(w, s.jwtRefusalMessage(err), http.StatusUnauthorized)
@@ -1307,11 +1335,11 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	// and the session expiry in place.
 	if req.Jwt != "" {
 		if nodeRecord.EnrollmentType != "OIDC" {
-			http.Error(w, "JWT refresh attestation is only supported for OIDC-enrolled nodes", http.StatusBadRequest)
+			http.Error(w, "JWT refresh attestation is only supported for JWT-enrolled nodes", http.StatusBadRequest)
 			return
 		}
 		verifyCtx, cancel := context.WithTimeout(ctx, JWTVerificationTimeout)
-		freshClaims, _, err := identity.VerifyJWT(verifyCtx, req.Jwt, s.config.AllowedAudiences, s.getProviders())
+		freshClaims, _, err := s.verifyJWT(verifyCtx, req.Jwt)
 		cancel()
 		if err != nil {
 			logger.Warnw("Refresh JWT verification failed", "peer_id", canonical, "error", err)
@@ -2659,7 +2687,7 @@ func (s *Server) authenticateUser(r *http.Request) (*storage.User, error) {
 
 	// 2. Validate OIDC token
 	ctx := r.Context()
-	claims, _, err := identity.VerifyJWT(ctx, tokenStr, s.config.AllowedAudiences, s.getProviders())
+	claims, _, err := s.verifyJWT(ctx, tokenStr)
 	if err != nil {
 		logger.Errorf("OIDC token verification failed: %v", err)
 		return nil, fmt.Errorf("failed to verify OIDC token: %w", err)
@@ -3643,6 +3671,11 @@ func oidcIdentityKey(claims jwt.MapClaims) string {
 		return ""
 	}
 	iss, _ := claims["iss"].(string)
+	if iss == "" && strings.HasPrefix(sub, "spiffe://") {
+		if domain, err := identity.SPIFFETrustDomainFromID(sub); err == nil {
+			iss = "spiffe://" + domain
+		}
+	}
 	return iss + "|" + sub
 }
 

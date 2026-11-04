@@ -48,7 +48,22 @@ JWT-SVID written by `spiffe-helper`). On GCE and Cloud Run,
 `agentmesh-node run --cloud-provider gcp` (or `auto`) fetches an identity token
 directly from the instance metadata server. `--client-id` and
 `--client-secret-path` do the same with an OAuth client-credentials grant.
-Routers enroll in the same way with `agentmesh-router --jwt-path`. The control
+Routers enroll in the same way with `agentmesh-router --jwt-path`.
+
+For native SPIFFE JWT-SVID verification without OIDC discovery, configure one
+HTTPS bundle endpoint for each trust domain using the repeatable
+`--spiffe-bundle-endpoint <trust-domain>=<https-url>` flag on
+`agentmesh-control-plane` or `agentmesh-one`. The trust domain is selected
+from the JWT-SVID's `sub` SPIFFE ID, then its signature is verified only
+against JWKs in that domain's configured bundle with `use: "jwt-svid"`.
+The verifier requires the JWT-SVID `aud` and `exp` claims and an audience
+listed in `--allowed-audiences`. Bundle endpoints must use HTTPS with normal
+certificate verification; endpoint URLs are never learned from a token.
+Bundles are refreshed using `spiffe_refresh_hint` (five minutes when omitted),
+and updates with a sequence rollback are rejected. If a refresh fails after
+the advertised refresh interval, verification fails closed rather than
+using stale signing keys. Existing OIDC issuer discovery remains available
+and unchanged. The control
 plane marks workload issuers with `--workload-issuer` (`<issuer>` or
 `<issuer>=<email-suffix>`) so workload tokens can enroll, refresh, and
 exchange credentials while being refused at human operator endpoints

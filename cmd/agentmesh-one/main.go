@@ -56,6 +56,7 @@ func main() {
 		adminTokenPath       string
 		policyFile           string
 		issuerFlags          controlplane.IssuerFlags
+		spiffeBundleEndpoints []string
 		oidcClientID         string
 		allowedAudiencesFlag string
 		logLevel             string
@@ -157,6 +158,7 @@ func main() {
 				PolicyFile:       policyFile,
 				OIDCIssuer:       issuerFlags.OIDCIssuer(),
 				WorkloadIssuer:   issuerFlags.WorkloadIssuer(),
+				SPIFFEBundleEndpoints: spiffeBundleEndpoints,
 				OIDCClientID:     oidcClientID,
 				AllowedAudiences: auds,
 				ControlPlane:     cpTunables,
@@ -211,6 +213,7 @@ func main() {
 	rootCmd.Flags().StringVar(&adminTokenPath, "admin-token-path", "", "File containing the admin API bearer token (or env AGENTMESH_ADMIN_TOKEN; auto-generated and persisted in --data-dir if neither is set)")
 	rootCmd.Flags().StringVar(&policyFile, "policy-file", "", "Path to a protojson PolicyConfig seeding the mesh policy on first boot only")
 	issuerFlags.Register(rootCmd.Flags(), "Optional ")
+	rootCmd.Flags().StringSliceVar(&spiffeBundleEndpoints, "spiffe-bundle-endpoint", nil, "SPIFFE JWT-SVID trust bundle endpoint as <trust-domain>=<https-url>; repeat for each trust domain")
 	rootCmd.Flags().StringVar(&oidcClientID, "oidc-client-id", "", "OAuth client id advertised via /info (defaults to the first allowed audience)")
 	rootCmd.Flags().StringVar(&allowedAudiencesFlag, "allowed-audiences", api.DefaultAudience, "Comma-separated list of allowed OIDC audiences")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
