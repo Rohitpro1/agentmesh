@@ -111,10 +111,10 @@ type Options struct {
 	// protojson PolicyConfig payload.
 	PolicyFile string
 	// OIDCIssuer optionally enables full OIDC enrollment.
-	OIDCIssuer       string
-	WorkloadIssuer   string
+	OIDCIssuer            string
+	WorkloadIssuer        string
 	SPIFFEBundleEndpoints []string
-	AllowedAudiences []string
+	AllowedAudiences      []string
 	// OIDCClientID is the OAuth client id advertised via /info.
 	OIDCClientID string
 

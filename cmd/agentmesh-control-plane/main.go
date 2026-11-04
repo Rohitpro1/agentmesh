@@ -41,8 +41,8 @@ var (
 	dbDriver               string
 	dbDSN                  string
 	dbDSNPath              string
-	issuerFlags            controlplane.IssuerFlags
-	spiffeBundleEndpoints  []string
+	issuerFlags           controlplane.IssuerFlags
+	spiffeBundleEndpoints []string
 	oidcClientID           string
 	allowedAudiencesFlag   string
 	keyRotationInterval    time.Duration

@@ -243,6 +243,13 @@ func parseSPIFFEJWTBundle(body []byte) (*spiffeJWTBundle, error) {
 	if err := dec.Decode(&set); err != nil {
 		return nil, fmt.Errorf("decode SPIFFE JWK set: %w", err)
 	}
+	var trailing any
+	if err := dec.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return nil, errors.New("SPIFFE JWK set contains trailing JSON data")
+		}
+		return nil, fmt.Errorf("read trailing SPIFFE JWK set data: %w", err)
+	}
 	keysRaw, ok := set["keys"]
 	if !ok {
 		return nil, errors.New("SPIFFE JWK set has no keys member")

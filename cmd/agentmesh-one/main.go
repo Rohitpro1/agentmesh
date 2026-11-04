@@ -55,7 +55,7 @@ func main() {
 		noJoinToken          bool
 		adminTokenPath       string
 		policyFile           string
-		issuerFlags          controlplane.IssuerFlags
+		issuerFlags           controlplane.IssuerFlags
 		spiffeBundleEndpoints []string
 		oidcClientID         string
 		allowedAudiencesFlag string

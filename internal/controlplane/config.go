@@ -32,10 +32,10 @@ type Options struct {
 	// human user tokens. Tokens from a workload issuer are accepted at
 	// /register, /refresh, and /token/exchange, and refused at /user/* and
 	// /oauth/authorize.
-	WorkloadIssuer      string
+	WorkloadIssuer string
 	// SPIFFEBundleEndpoints maps trust domains to explicitly trusted HTTPS SPIFFE bundle endpoints.
 	SPIFFEBundleEndpoints []string
-	OIDCClientID        string // OAuth client id advertised via /info; defaults to the first allowed audience
+	OIDCClientID          string // OAuth client id advertised via /info; defaults to the first allowed audience
 	AllowedAudiences    []string
 	LeaseDuration       time.Duration
 	KeyRotationInterval time.Duration
