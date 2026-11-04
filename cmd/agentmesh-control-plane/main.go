@@ -86,8 +86,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			logging.Setup(logging.Options{Level: logLevel, Format: logFormat})
 
-			if issuerFlags.Empty() {
-				logger.Fatalf("OIDC issuer is required (use --issuer or --workload-issuer flag)")
+			if issuerFlags.Empty() && len(spiffeBundleEndpoints) == 0 {
+				logger.Fatalf("configure an OIDC issuer (--issuer/--workload-issuer) or a SPIFFE bundle endpoint (--spiffe-bundle-endpoint)")
 			}
 			if insecureSkipTLSVerify {
 				logger.Warnf("--insecure-skip-tls-verify is set: identity provider TLS certificates are not verified, so anyone on the path to the provider can forge the identities this control plane admits. For development only.")

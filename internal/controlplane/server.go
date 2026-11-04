@@ -3671,7 +3671,7 @@ func oidcIdentityKey(claims jwt.MapClaims) string {
 		return ""
 	}
 	iss, _ := claims["iss"].(string)
-	if iss == "" && strings.HasPrefix(sub, "spiffe://") {
+	if strings.HasPrefix(sub, "spiffe://") {
 		if domain, err := identity.SPIFFETrustDomainFromID(sub); err == nil {
 			iss = "spiffe://" + domain
 		}

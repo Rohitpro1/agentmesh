@@ -159,8 +159,7 @@ func TestSPIFFEBundleManagerRefreshAndSequenceRollback(t *testing.T) {
 	oldKey := newSPIFFETestRSAKey(t)
 	newKey := newSPIFFETestRSAKey(t)
 	var mu sync.Mutex
-	sequence := uint64(1)
-	currentKey := oldKey
+	body := spiffeTestBundle(t, oldKey, 1)
 	fail := false
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
@@ -170,7 +169,7 @@ func TestSPIFFEBundleManagerRefreshAndSequenceRollback(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(spiffeTestBundle(t, currentKey, sequence))
+		_, _ = w.Write(body)
 	}))
 	defer server.Close()
 
@@ -186,8 +185,7 @@ func TestSPIFFEBundleManagerRefreshAndSequenceRollback(t *testing.T) {
 	}
 
 	mu.Lock()
-	sequence = 2
-	currentKey = newKey
+	body = spiffeTestBundle(t, newKey, 2)
 	mu.Unlock()
 	manager.endpoints["example.org"].mu.Lock()
 	manager.endpoints["example.org"].refreshAt = time.Time{}
@@ -202,7 +200,7 @@ func TestSPIFFEBundleManagerRefreshAndSequenceRollback(t *testing.T) {
 	}
 
 	mu.Lock()
-	sequence = 1
+	body = spiffeTestBundle(t, oldKey, 1)
 	mu.Unlock()
 	manager.endpoints["example.org"].mu.Lock()
 	manager.endpoints["example.org"].refreshAt = time.Time{}

@@ -272,7 +272,10 @@ func parseSPIFFEJWTBundle(body []byte) (*spiffeJWTBundle, error) {
 		if err != nil || seconds <= 0 {
 			return nil, errors.New("spiffe_refresh_hint must be a positive integer")
 		}
-		bundle.refreshHint = min(time.Duration(seconds)*time.Second, spiffeBundleRefreshMax)
+		if seconds > int64(spiffeBundleRefreshMax/time.Second) {
+			seconds = int64(spiffeBundleRefreshMax / time.Second)
+		}
+		bundle.refreshHint = time.Duration(seconds) * time.Second
 	}
 	seen := make(map[string]bool)
 	for i, raw := range rawKeys {
@@ -325,7 +328,7 @@ func parseSPIFFEJWK(kty, alg, n, e, crv, x, y string) (any, error) {
 		if modulus.BitLen() < 2048 {
 			return nil, fmt.Errorf("RSA modulus is too small: %d bits", modulus.BitLen())
 		}
-		if alg != "" && !strings.HasPrefix(alg, "RS") && !strings.HasPrefix(alg, "PS") {
+		if alg != "" && !containsSPIFFEString([]string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512"}, alg) {
 			return nil, fmt.Errorf("algorithm %q is not supported for RSA", alg)
 		}
 		return &rsa.PublicKey{N: modulus, E: int(exponent.Int64())}, nil
@@ -433,14 +436,20 @@ func verifySPIFFEJWT(raw, trustDomain string, audiences []string, keys []spiffeJ
 }
 
 func spiffeKeySupportsAlg(key any, alg string) bool {
-	switch key.(type) {
+	switch publicKey := key.(type) {
 	case *rsa.PublicKey:
 		return strings.HasPrefix(alg, "RS") || strings.HasPrefix(alg, "PS")
 	case *ecdsa.PublicKey:
-		return alg == "ES256" || alg == "ES384" || alg == "ES512"
-	default:
-		return false
+		switch publicKey.Curve.Params().Name {
+		case "P-256":
+			return alg == "ES256"
+		case "P-384":
+			return alg == "ES384"
+		case "P-521":
+			return alg == "ES512"
+		}
 	}
+	return false
 }
 
 func containsSPIFFEString(values []string, value string) bool {

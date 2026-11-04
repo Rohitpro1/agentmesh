@@ -57,8 +57,8 @@ HTTPS bundle endpoint for each trust domain using the repeatable
 from the JWT-SVID's `sub` SPIFFE ID, then its signature is verified only
 against JWKs in that domain's configured bundle with `use: "jwt-svid"`.
 The verifier requires the JWT-SVID `aud` and `exp` claims and an audience
-listed in `--allowed-audiences`. Bundle endpoints must use HTTPS with normal
-certificate verification; endpoint URLs are never learned from a token.
+listed in `--allowed-audiences`. Bundle endpoints must use HTTPS with normal Web PKI certificate verification
+(the `https_web` profile); endpoint URLs are never learned from a token.
 Bundles are refreshed using `spiffe_refresh_hint` (five minutes when omitted),
 and updates with a sequence rollback are rejected. If a refresh fails after
 the advertised refresh interval, verification fails closed rather than
